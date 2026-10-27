@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ผจญภัยเวทมนต์วิทย์ ป.4</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap');
+/* แก้บั๊ก: ให้ attribute hidden ใช้งานได้จริง แม้ element จะกำหนด display ไว้ */
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0;background:#100d2b;color:#fff;font-family:'Kanit',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}
+#shell{width:min(1100px,100%);position:relative;border:4px solid #8f7aff;border-radius:14px;overflow:hidden;box-shadow:0 0 0 4px #29205d,0 18px 70px #050316;background:#17133e}
+#gameCanvas{display:block;width:100%;aspect-ratio:16/9;image-rendering:pixelated;background:#201b59;touch-action:none}
+#hud{position:absolute;top:10px;left:12px;right:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;pointer-events:none;text-shadow:2px 2px #30205b;font-weight:700}
+.pill{background:#21184dcc;border:2px solid #a99aff;border-radius:9px;padding:5px 10px;font-size:clamp(12px,1.7vw,17px);box-shadow:0 3px #100b30}
+#progressWrap{height:13px;width:120px;background:#241d55;border:2px solid #b3a6ff;border-radius:8px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:5px}
+#progress{height:100%;width:0;background:linear-gradient(90deg,#5ff4c2,#ffe276);transition:width .25s}
+#soundBtn{pointer-events:auto;margin-left:auto;background:#30245f;color:#fff;border:2px solid #b3a6ff;border-radius:9px;padding:6px 10px;font:inherit;cursor:pointer}
+.screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(180deg,#181044d9,#100d2bf2);text-align:center}
+.panel{max-width:690px;width:100%;background:#f8f0d8;color:#27204c;border:5px solid #8d70ff;outline:4px solid #33216b;border-radius:12px;padding:clamp(16px,3vw,30px);box-shadow:0 10px 0 #100b2b;max-height:94%;overflow:auto}
+h1{font-size:clamp(22px,4vw,42px);line-height:1.25;margin:0 0 10px;color:#5937b4;text-shadow:2px 2px #d7c7ff}
+h2{margin:0 0 12px;font-size:clamp(20px,3vw,30px);color:#5636ad}
+.subtitle{font-size:clamp(15px,2.1vw,21px);margin:0 auto 12px;max-width:600px;line-height:1.6;font-weight:600}
+.btn{font-family:inherit;font-weight:700;font-size:clamp(14px,2vw,18px);padding:9px 18px;border:3px solid #33216b;border-radius:8px;box-shadow:0 4px #33216b;background:#ffd76a;color:#2b2055;cursor:pointer;margin:4px}
+.btn:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.btn.secondary{background:#b7f6df}
+.btn:focus-visible,.choice:focus-visible{outline:3px solid #222}
+.story{line-height:1.75;margin:10px auto 18px;font-size:clamp(13px,1.7vw,17px)}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0}
+.choice{border:3px solid #8e7bd0;border-radius:8px;background:#fffaf0;color:#2c2452;text-align:left;padding:10px;font:600 clamp(14px,1.9vw,18px) 'Kanit',sans-serif;cursor:pointer}
+.choice:hover:not(:disabled){background:#e6ddff}
+.choice:disabled{cursor:default;opacity:.5}
+.choice.correct{background:#b7f6df;border-color:#1c8a5f;opacity:1}
+.choice.wrong{background:#ffd3d3;border-color:#c2493f}
+#feedback{min-height:48px;font-weight:700;line-height:1.5}
+.small{font-size:13px;opacity:.85}
+.review{text-align:left;margin:8px auto;max-width:560px;font-size:14px;line-height:1.6}
+.review li{margin:2px 0}
+.mobileControls{display:none;position:absolute;bottom:10px;left:10px;right:10px;justify-content:space-between;pointer-events:none}
+.controlGroup{display:flex;gap:9px}
+.touch{pointer-events:auto;width:58px;height:50px;border:2px solid #d3c6ff;border-radius:12px;background:#2b226bcc;color:white;font-size:22px;font-weight:bold;touch-action:none;user-select:none;-webkit-user-select:none}
+.touch.jump{width:84px;background:#5b3db5;font-size:16px;font-family:inherit}
+@media(max-width:650px),(pointer:coarse){.mobileControls{display:flex}}
+@media(max-width:650px){body{padding:4px}#shell{border-width:2px;border-radius:8px}#hud{top:5px;left:5px;right:5px;gap:4px}.pill{padding:3px 6px;font-size:11px}#progressWrap{width:55px;height:10px}.panel{padding:12px;border-width:3px}.choices{gap:6px}.choice{padding:8px}.screen{padding:8px}}
+</style>
+</head>
+<body>
+<div id="shell">
+<canvas id="gameCanvas" width="960" height="540" aria-label="เกมผจญภัยเวทมนต์วิทย์"></canvas>
+<div id="hud" hidden>
+ <div class="pill" id="hearts"></div>
+ <div class="pill">⭐ <span id="score">0</span></div>
+ <div class="pill">💎 <span id="crystals">0</span>/10</div>
+ <div class="pill">ภารกิจ <span id="progressText">0%</span><span id="progressWrap"><div id="progress"></div></span></div>
+ <button id="soundBtn" aria-label="เปิดหรือปิดเสียง">🔊 เสียง</button>
+</div>
+<div id="overlay" class="screen"></div>
+<div class="mobileControls" id="mobileControls" hidden>
+ <div class="controlGroup"><button class="touch" data-key="left" aria-label="ซ้าย">◀</button><button class="touch" data-key="right" aria-label="ขวา">▶</button></div>
+ <div class="controlGroup"><button class="touch jump" data-key="jump">กระโดด ⤴</button></div>
+</div>
+</div>
+<script>
+// =========================================================
+// CONFIG + quizData : ครูแก้คำถาม/คำใบ้/คำอธิบายได้ที่ส่วนนี้
+// answer = index ของตัวเลือกที่ถูก (นับจาก 0) / ต้องมีคำถาม 10 ข้อ
+// =========================================================
+const CONFIG={W:960,H:540,gravity:.55,moveSpeed:3.35,jumpPower:10.8,springPower:15,worldWidth:7200,groundY:458,zoneW:700,zones:10,maxHearts:3};
+const quizData=[
+{q:"น้ำที่แข็งตัวเป็นก้อนน้ำแข็ง อยู่ในสถานะใด?",choices:["ของแข็ง","ของเหลว","แก๊ส","พลาสมา"],answer:0,hint:"ลองนึกถึงก้อนน้ำแข็งที่จับแล้วมีรูปร่างคงที่",explain:"น้ำแข็งคือน้ำในสถานะของแข็ง มีรูปร่างคงที่"},
+{q:"พืชสร้างอาหารเองโดยต้องใช้พลังงานจากสิ่งใด?",choices:["ดวงจันทร์","แสงอาทิตย์","ลม","ดิน"],answer:1,hint:"พืชต้องการแสงเพื่อสร้างอาหารผ่านใบ",explain:"พืชใช้พลังงานแสงอาทิตย์สร้างอาหาร เรียกว่าการสังเคราะห์ด้วยแสง"},
+{q:"ข้อใดเป็นแหล่งกำเนิดแสงด้วยตัวเอง?",choices:["ดวงจันทร์","กระจก","ดวงอาทิตย์","สมุด"],answer:2,hint:"สิ่งนี้ส่องสว่างให้โลกในเวลากลางวัน",explain:"ดวงอาทิตย์สร้างแสงได้เอง ส่วนดวงจันทร์เพียงสะท้อนแสง"},
+{q:"ห่วงโซ่อาหาร หญ้า → กระต่าย → ? ข้อใดเหมาะสมที่สุด?",choices:["ต้นไม้","สุนัขจิ้งจอก","ก้อนหิน","เห็ด"],answer:1,hint:"เลือกสัตว์ที่กินกระต่ายเป็นอาหารได้",explain:"สุนัขจิ้งจอกกินกระต่ายได้ จึงเป็นผู้บริโภคลำดับถัดไป"},
+{q:"แม่เหล็กดูดวัสดุชนิดใดได้?",choices:["พลาสติก","ไม้","ตะปูเหล็ก","ยางลบ"],answer:2,hint:"มองหาวัสดุที่ทำจากโลหะชนิดหนึ่ง",explain:"เหล็กถูกแม่เหล็กดูดได้ แต่พลาสติกและไม้ไม่ถูกดูด"},
+{q:"แรงเสียดทานเกิดขึ้นเมื่อใด?",choices:["วัตถุลอยในอากาศ","ผิววัตถุสองชิ้นเสียดสีกัน","วัตถุอยู่นิ่งในที่มืด","วัตถุถูกแสงส่อง"],answer:1,hint:"คิดถึงการถูมือหรือการลากกล่องบนพื้น",explain:"แรงเสียดทานเกิดเมื่อผิวสัมผัสของวัตถุเสียดสีกัน ช่วยต้านการเคลื่อนที่"},
+{q:"น้ำเปลี่ยนเป็นไอน้ำ เรียกว่าอะไร?",choices:["การแข็งตัว","การควบแน่น","การละลาย","การระเหย"],answer:3,hint:"เกิดได้เมื่อแอ่งน้ำได้รับความร้อนจากแสงแดด",explain:"การระเหยคือการเปลี่ยนสถานะจากของเหลวเป็นแก๊ส"},
+{q:"วัสดุในข้อใดเป็นตัวนำไฟฟ้าที่ดี?",choices:["ทองแดง","ยาง","พลาสติก","ผ้า"],answer:0,hint:"โลหะชนิดนี้นิยมใช้ทำสายไฟด้านใน",explain:"ทองแดงนำไฟฟ้าได้ดี จึงนิยมใช้ทำสายไฟ"},
+{q:"รากของพืชมีหน้าที่หลักอย่างไร?",choices:["สร้างดอก","ดูดน้ำและแร่ธาตุจากดิน","ปล่อยกลิ่น","ดูดแสง"],answer:1,hint:"ส่วนนี้อยู่ใต้ดินและช่วยให้ต้นไม้ยึดเกาะ",explain:"รากดูดน้ำและแร่ธาตุจากดิน และช่วยยึดต้นพืชไว้กับพื้น"},
+{q:"ดวงจันทร์โคจรรอบดาวใด?",choices:["ดาวอังคาร","ดวงอาทิตย์","โลก","ดาวศุกร์"],answer:2,hint:"ดาวเคราะห์ที่เราอาศัยอยู่",explain:"ดวงจันทร์เป็นบริวารธรรมชาติที่โคจรรอบโลก"}
+];
+
+// =========================================================
+// ตัวแปรหลัก
+// =========================================================
+const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const overlay=document.getElementById('overlay'),hud=document.getElementById('hud'),mobileControls=document.getElementById('mobileControls');
+const $=id=>document.getElementById(id);
+const Z=CONFIG.zoneW,G=CONFIG.groundY;
+const keys={left:false,right:false,jump:false};
+let state='menu',cameraX=0,score=0,hearts=3,got=[],missed=new Set(),questionIndex=-1,quizAttempts=0,quizChoices=[],quizWrong=new Set(),quizLocked=false;
+let muted=false,audioCtx=null,lastTime=0,acc=0,worldTime=0,checkpointX=60;
+let particles=[],stars=[],enemies=[],platforms=[],portals=[],coins=[];
+const player={x:60,y:370,w:27,h:40,vx:0,vy:0,onGround:false,face:1,coyote:0,jumpBuffer:0,invuln:0,anim:0,springBoost:0};
+const STEP=1000/60;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// =========================================================
+// สร้างด่าน: 10 โซน โซนละ 700px
+// แต่ละโซน: แพลตฟอร์มลอย 3 อัน, สปริงเห็ด, เหรียญ, ศัตรู, ประตูคริสตัล 1 บาน
+// หลุมกว้าง 100px (กระโดดข้ามได้สบาย) อยู่ช่วง local 360-460 ตั้งแต่โซนที่ 2
+// =========================================================
+function initLevel(){
+ platforms=[];enemies=[];portals=[];coins=[];particles=[];stars=[];got=[];checkpointX=60;
+ for(let i=0;i<100;i++)stars.push({x:rand(0,CONFIG.worldWidth),y:rand(25,300),s:Math.random()<.3?3:2,p:rand(0,6)});
+ let x=0;
+ for(let z=1;z<CONFIG.zones;z++){const gx=z*Z+360;platforms.push({x,y:G,w:gx-x,h:100,type:'ground'});x=gx+100}
+ platforms.push({x,y:G,w:CONFIG.worldWidth-x,h:100,type:'ground'});
+ for(let z=0;z<CONFIG.zones;z++){
+  const b=z*Z;
+  // แพลตฟอร์มลอย: ทุกขั้นสูงไม่เกิน ~55px จึงกระโดดขึ้นได้ทุกอัน
+  platforms.push({x:b+120,y:372,w:100,h:18,type:'float'},{x:b+250,y:320,w:90,h:18,type:'float'},{x:b+520,y:290,w:110,h:18,type:'float'});
+  // สปริงเห็ด: เหยียบแล้วเด้งสูงขึ้นไปบนแพลตฟอร์มโบนัส
+  platforms.push({x:b+480,y:G-14,w:36,h:14,type:'spring'});
+  coins.push({x:b+280,y:285,got:false},{x:b+312,y:285,got:false},{x:b+560,y:255,got:false},{x:b+596,y:255,got:false});
+  portals.push({x:b+640,y:G-76,w:44,h:76,index:z,active:false});
+  enemies.push({x:b+170,y:G-22,w:27,h:22,vx:(z%2?.7:-.7),min:b+130,max:b+340,alive:true,type:'slime'});
+  if(z>=2)enemies.push({x:b+520,y:350,baseY:350,w:27,h:20,vx:.8,min:b+470,max:b+600,alive:true,type:'bat',phase:rand(0,6)});
+ }
+}
+function resetGame(){
+ initLevel();
+ Object.assign(player,{x:60,y:370,vx:0,vy:0,invuln:0,springBoost:0,jumpBuffer:0,coyote:0,face:1});
+ score=0;hearts=CONFIG.maxHearts;missed.clear();cameraX=0;
+ keys.left=keys.right=keys.jump=false;
+ state='play';overlay.hidden=true;hud.hidden=false;mobileControls.hidden=false;updateHUD();playTone(660,.12);
+}
+function updateHUD(){
+ const h=Math.max(0,hearts);
+ $('hearts').textContent='💖 '.repeat(h)+'🖤 '.repeat(CONFIG.maxHearts-h);
+ $('score').textContent=score;$('crystals').textContent=got.length;
+ const p=Math.round(got.length/10*100);$('progressText').textContent=p+'%';$('progress').style.width=p+'%';
+}
+
+// =========================================================
+// เสียง (Web Audio) + เพลงพื้นหลัง chiptune เบา ๆ
+// =========================================================
+function ensureAudio(){if(muted)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}catch(e){}}
+function playTone(f=440,d=.1,type='square',vol=.055){
+ if(muted)return;ensureAudio();if(!audioCtx)return;
+ const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime;
+ o.type=type;o.frequency.value=f;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+ o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+d);
+}
+const MELODY=[392,440,494,587,494,440,392,330,349,392,440,523,440,392,349,294];
+function musicTick(){if(muted||worldTime%14!==0)return;playTone(MELODY[Math.floor(worldTime/14)%MELODY.length],.13,'triangle',.028)}
+function syncSoundBtn(){$('soundBtn').textContent=muted?'🔇 ปิดเสียง':'🔊 เสียง'}
+
+// =========================================================
+// วาดภาพ (pixel art ด้วยสี่เหลี่ยม)
+// =========================================================
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+function burst(x,y,color='#ffe477',n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:rand(-2.8,2.8),vy:rand(-4,1),life:rand(20,38),color,size:Math.random()<.5?3:5})}
+function drawBackground(){
+ const g=ctx.createLinearGradient(0,0,0,540);g.addColorStop(0,'#201957');g.addColorStop(.55,'#493d9b');g.addColorStop(1,'#176b70');ctx.fillStyle=g;ctx.fillRect(0,0,960,540);
+ // ชั้นไกล: ปราสาทลอยฟ้า
+ for(let i=0;i<7;i++){const x=((i*210-cameraX*.12)%1300+1300)%1300-150;rect(x,90,65,70,'#332c78');rect(x+12,62,15,40,'#453a91');rect(x+37,72,13,30,'#453a91');rect(x+22,120,20,40,'#25205f')}
+ // ชั้นกลาง: เนินป่าเรืองแสง
+ for(let i=0;i<10;i++){const x=((i*150-cameraX*.32)%1500+1500)%1500-120;rect(x,300,90,200,'#164f66');rect(x+15,260,60,70,'#217b78');rect(x+25,240,35,50,'#38a58c');rect(x+42,220,7,7,'#9effc6')}
+ // ดาวระยิบระยับ
+ stars.forEach(s=>{const tw=Math.sin(worldTime*.06+s.p)*.5+.5;rect(((s.x-cameraX*.18)%960+960)%960,s.y,s.s,s.s,tw>.4?'#d7f9ff':'#a4a0ee')});
+ // ชั้นใกล้: เห็ดยักษ์
+ for(let i=0;i<9;i++){const x=((i*300-cameraX*.55)%2700+2700)%2700-80;rect(x+24,355,24,100,'#6b4594');rect(x,330,75,27,'#e987dc');rect(x+12,320,12,10,'#ffc9f5');rect(x+48,340,10,7,'#ffe7ff')}
+}
+function groundAt(x){return platforms.some(p=>p.type==='ground'&&x>=p.x+20&&x<=p.x+p.w-20)}
+function drawWorld(){
+ ctx.save();ctx.translate(-Math.round(cameraX),0);
+ // ต้นไม้ตกแต่ง (วาดเฉพาะที่อยู่บนพื้น และอยู่ในหน้าจอ)
+ for(let i=0;i<Math.ceil(CONFIG.worldWidth/240);i++){const x=i*240+30;if(x<cameraX-60||x>cameraX+1000||!groundAt(x))continue;rect(x,G-60,12,62,'#583d73');rect(x-18,G-78,48,25,'#168a79');rect(x-8,G-93,30,22,'#25b994');rect(x+5,G-83,5,5,'#c2ff8d')}
+ platforms.forEach(p=>{
+  if(p.x+p.w<cameraX-20||p.x>cameraX+980)return;
+  if(p.type==='ground'){rect(p.x,p.y,p.w,p.h,'#253a62');rect(p.x,p.y,p.w,12,'#55d29d');rect(p.x,p.y+12,p.w,4,'#b6ffad');for(let x=p.x+12;x<p.x+p.w;x+=38)rect(x,p.y+28,17,5,'#34517b')}
+  else if(p.type==='spring'){rect(p.x+14,p.y+6,8,8,'#f7e6ff');rect(p.x,p.y,p.w,8,'#ff6fc9');rect(p.x+5,p.y-3,p.w-10,5,'#ffb3ea');rect(p.x+8,p.y+1,5,3,'#fff')}
+  else{rect(p.x,p.y,p.w,p.h,'#5c49bd');rect(p.x,p.y,p.w,5,'#b8aaff');for(let x=p.x+10;x<p.x+p.w-5;x+=26)rect(x,p.y+8,7,5,'#34276e')}
+ });
+ coins.forEach(c=>{if(c.got)return;const by=Math.sin(worldTime*.08+c.x)*3;rect(c.x-5,c.y-7+by,10,15,'#ffce50');rect(c.x-2,c.y-4+by,4,9,'#fff0a0');rect(c.x-2,c.y-11+by,4,3,'#fff0a0')});
+ portals.forEach(p=>{
+  rect(p.x-4,p.y-5,p.w+8,p.h+10,'#3a246b');rect(p.x,p.y,p.w,p.h,p.active?'#67f6cb':'#8d63f2');rect(p.x+6,p.y+7,p.w-12,p.h-14,p.active?'#d4fff3':'#31245f');
+  rect(p.x+13,p.y+15,5,5,'#ffdf72');rect(p.x+26,p.y+30,5,5,'#ffdf72');
+  if(!got.includes(p.index)){const by=Math.sin(worldTime*.07+p.index)*4;rect(p.x+15,p.y-24+by,14,6,'#fff0a0');rect(p.x+11,p.y-18+by,22,10,'#ffe477');rect(p.x+15,p.y-8+by,14,6,'#fff0a0');
+   ctx.fillStyle='#fff';ctx.font='700 15px Kanit';ctx.textAlign='center';ctx.fillText(String(p.index+1),p.x+22,p.y-32+by);ctx.textAlign='left'}
+ });
+ enemies.forEach(e=>{
+  if(!e.alive)return;
+  if(e.type==='slime'){const sq=Math.sin(worldTime*.12)*2;rect(e.x,e.y+5+sq,e.w,e.h-5-sq,'#57e6b4');rect(e.x+4,e.y+sq,e.w-8,9,'#8bffd6');rect(e.x+7,e.y+9,4,5,'#24345d');rect(e.x+18,e.y+9,4,5,'#24345d')}
+  else{const fl=Math.sin(worldTime*.3)*4;rect(e.x+5,e.y+5,17,15,'#4c397e');rect(e.x,e.y-3+fl,7,14,'#8874d9');rect(e.x+20,e.y-3+fl,7,14,'#8874d9');rect(e.x+10,e.y+10,4,4,'#fff3a3');rect(e.x+18,e.y+10,4,4,'#fff3a3')}
+ });
+ // เด็กนักเวทตัวละครต้นฉบับ
+ if(player.invuln<=0||Math.floor(worldTime/4)%2===0){
+  const px=Math.round(player.x),py=Math.round(player.y),run=Math.abs(player.vx)>.4&&player.onGround?Math.sin(player.anim)*4:0;
+  rect(px+5,py+28,7,11,'#4c3c9a');rect(px+16,py+28,7,11,'#4c3c9a');rect(px+3,py+37+Math.max(0,run),10,4,'#ffd76a');rect(px+15,py+37+Math.max(0,-run),10,4,'#ffd76a');
+  rect(px+4,py+12,20,20,'#6b51d4');rect(px+1,py+17,5,12,'#f0b18a');rect(px+22,py+17,5,12,'#f0b18a');
+  rect(px+5,py+3,18,17,'#f3bd91');rect(px+3,py+7,22,6,'#f7cfaa');rect(px+8,py+8,3,5,'#28244f');rect(px+17,py+8,3,5,'#28244f');rect(px+10,py+15,7,2,'#9b4b73');
+  rect(px+1,py+2,25,6,'#8064e8');rect(px+7,py-8,13,12,'#8064e8');rect(px+11,py-14,7,9,'#a28cff');rect(px+7,py+3,13,3,'#ffda68');
+  const wx=player.face===1?px+28:px-5;rect(wx,py+18,4,17,'#9b653d');rect(wx-2,py+13,8,7,'#ffe477');rect(wx,py+11,4,4,'#fff9c5');
+ }
+ ctx.restore();
+}
+function draw(){
+ ctx.clearRect(0,0,960,540);drawBackground();drawWorld();
+ particles.forEach(p=>rect(p.x-cameraX,p.y,p.size,p.size,p.color));
+ if(state==='play'||state==='quiz'){ctx.fillStyle='#fff';ctx.font='14px Kanit';ctx.textAlign='left';ctx.fillText('โซน '+Math.min(10,Math.floor(player.x/Z)+1)+'/10',12,525)}
+}
+
+// =========================================================
+// ตรรกะเกม
+// =========================================================
+const overlap=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function respawn(){player.x=checkpointX;player.y=300;player.vx=player.vy=0;player.invuln=90;cameraX=clamp(player.x-960*.38,0,CONFIG.worldWidth-960)}
+function hurt(){
+ if(player.invuln>0)return;
+ hearts--;player.invuln=100;player.vy=-5;player.vx=-player.face*3;
+ playTone(145,.25,'sawtooth');burst(player.x+12,player.y+15,'#ff8eae',8);updateHUD();
+ if(hearts<=0){state='over';showOver()}
+}
+function fall(){
+ hearts--;playTone(120,.3,'sawtooth');updateHUD();
+ if(hearts<=0){state='over';showOver();return}
+ respawn();
+}
+function update(){
+ if(player.invuln>0)player.invuln--;
+ if(player.springBoost>0)player.springBoost--;
+ player.anim+=.2;
+ if(keys.left){player.vx-=.55;player.face=-1}
+ if(keys.right){player.vx+=.55;player.face=1}
+ if(!keys.left&&!keys.right)player.vx*=.82;
+ player.vx=clamp(player.vx,-CONFIG.moveSpeed,CONFIG.moveSpeed);
+ player.coyote=player.onGround?8:Math.max(0,player.coyote-1);
+ player.jumpBuffer=Math.max(0,player.jumpBuffer-1);
+ if(player.jumpBuffer>0&&player.coyote>0){player.vy=-CONFIG.jumpPower;player.onGround=false;player.coyote=0;player.jumpBuffer=0;playTone(520,.08)}
+ player.vy+=CONFIG.gravity;
+ if(!keys.jump&&player.vy<-4&&player.springBoost<=0)player.vy+=.23; // กดค้างกระโดดสูงขึ้น
+ player.x+=player.vx;
+ const oldY=player.y;player.y+=player.vy;player.onGround=false;
+ platforms.forEach(p=>{
+  if(player.x+player.w>p.x&&player.x<p.x+p.w){
+   if(oldY+player.h<=p.y+4&&player.y+player.h>=p.y&&player.vy>=0){
+    player.y=p.y-player.h;
+    if(p.type==='spring'){player.vy=-CONFIG.springPower;player.springBoost=24;playTone(300,.12,'triangle');setTimeout(()=>playTone(600,.12,'triangle'),60);burst(player.x+12,player.y+player.h,'#ffb3ea',8)}
+    else{player.vy=0;player.onGround=true}
+   } // แพลตฟอร์มลอยเป็นแบบ one-way: กระโดดทะลุจากด้านล่างขึ้นไปยืนได้ ไม่ชนหัว (เด็กไม่ติดเมื่อกระโดดใต้แพลตฟอร์ม)
+  }
+ });
+ player.x=clamp(player.x,0,CONFIG.worldWidth-player.w);
+ // จุดพักอัตโนมัติ: เมื่อยืนบนพื้นหลังผ่านจุดเริ่มต้นของโซน
+ const zone=Math.min(CONFIG.zones-1,Math.floor(player.x/Z)),cp=zone*Z+60;
+ if(player.onGround&&player.x>cp&&cp>checkpointX)checkpointX=cp;
+ if(player.y>610){fall();if(state!=='play')return}
+ enemies.forEach(e=>{
+  if(!e.alive)return;
+  e.x+=e.vx;if(e.x<e.min){e.x=e.min;e.vx=Math.abs(e.vx)}if(e.x+e.w>e.max){e.x=e.max-e.w;e.vx=-Math.abs(e.vx)}
+  if(e.type==='bat')e.y=e.baseY+Math.sin(worldTime*.07+e.phase)*25;
+  if(overlap(player,e)){
+   if(player.vy>1&&oldY+player.h<e.y+10){e.alive=false;player.vy=-7;score+=50;burst(e.x,e.y,'#8dffd7');playTone(780,.1);updateHUD()}
+   else hurt();
+  }
+ });
+ if(state!=='play')return;
+ coins.forEach(c=>{if(!c.got&&overlap(player,{x:c.x-8,y:c.y-10,w:16,h:20})){c.got=true;score+=20;playTone(880,.07);burst(c.x,c.y,'#ffe477',5);updateHUD()}});
+ for(const p of portals){
+  if(!got.includes(p.index)&&overlap(player,{x:p.x-10,y:p.y-8,w:p.w+20,h:p.h+16})){openQuiz(p.index);return}
+ }
+ cameraX+=(clamp(player.x-960*.38,0,CONFIG.worldWidth-960)-cameraX)*.12;
+ particles=particles.filter(p=>p.life-->0);
+ particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.12});
+ musicTick();
+}
+
+// =========================================================
+// ระบบ Quiz
+// =========================================================
+function solveCrystal(i){if(got.includes(i))return;got.push(i);portals[i].active=true;checkpointX=Math.max(checkpointX,portals[i].x-50);updateHUD()}
+function openQuiz(i){
+ state='quiz';questionIndex=i;quizAttempts=0;quizLocked=false;quizWrong=new Set();
+ keys.left=keys.right=keys.jump=false;player.vx=0;
+ const q=quizData[i];
+ quizChoices=shuffle(q.choices.map((text,index)=>({text,index})));
+ overlay.hidden=false;
+ overlay.innerHTML=`<div class="panel"><h2>📖 ประตูคริสตัลดวงที่ ${i+1} / 10</h2><p class="subtitle">${esc(q.q)}</p><div class="choices">${quizChoices.map((c,n)=>`<button class="choice" data-choice="${c.index}"><b>${['ก','ข','ค','ง'][n]}.</b> ${esc(c.text)}</button>`).join('')}</div><div id="feedback" aria-live="polite"></div><p class="small">เลือกคำตอบด้วยเมาส์/สัมผัส หรือกดปุ่ม 1–4</p></div>`;
+ overlay.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>answerQuiz(+b.dataset.choice));
+}
+function choiceBtn(idx){return overlay.querySelector(`[data-choice="${idx}"]`)}
+function lockChoices(){overlay.querySelectorAll('[data-choice]').forEach(b=>b.disabled=true)}
+function closeQuiz(){
+ if(state!=='quiz')return;
+ overlay.hidden=true;state='play';player.invuln=40;
+ if(got.length===quizData.length){state='win';showWin()}
+}
+function answerQuiz(idx){
+ if(state!=='quiz'||quizLocked||quizWrong.has(idx))return;
+ const q=quizData[questionIndex],fb=$('feedback');
+ if(idx===q.answer){
+  quizLocked=true;lockChoices();choiceBtn(idx).classList.add('correct');
+  score+=100;
+  if(!missed.has(questionIndex)&&hearts<CONFIG.maxHearts)hearts++; // ตอบถูกครั้งแรก ฟื้นหัวใจ 1 ดวง
+  solveCrystal(questionIndex);
+  playTone(880,.12,'triangle');setTimeout(()=>playTone(1175,.15,'triangle'),70);burst(player.x+12,player.y,'#ffe477',24);
+  fb.textContent='✨ ถูกต้อง! '+q.explain;fb.style.color='#16734d';
+  setTimeout(closeQuiz,1500);
+ }else{
+  quizAttempts++;quizWrong.add(idx);missed.add(questionIndex);hearts--;updateHUD();playTone(170,.22,'sawtooth');
+  const b=choiceBtn(idx);b.disabled=true;b.classList.add('wrong');
+  if(hearts<=0){
+   quizLocked=true;lockChoices();choiceBtn(q.answer).classList.add('correct');
+   fb.textContent='เฉลย: '+q.choices[q.answer]+' — '+q.explain;fb.style.color='#a13c30';
+   setTimeout(()=>{if(state==='quiz'){state='over';showOver()}},1800);
+  }else if(quizAttempts===1){
+   fb.textContent='ลองอีกครั้งนะ 💡 คำใบ้: '+q.hint;fb.style.color='#b34832';
+  }else{
+   // ผิดครั้งที่ 2: เฉลยแล้วไปต่อ (ถือว่าเก็บคริสตัลได้ แต่ไม่ได้คะแนนข้อนี้)
+   quizLocked=true;lockChoices();choiceBtn(q.answer).classList.add('correct');solveCrystal(questionIndex);
+   fb.textContent='เฉลย: '+q.choices[q.answer]+' — '+q.explain;fb.style.color='#a13c30';
+   setTimeout(closeQuiz,2600);
+  }
+ }
+}
+
+// =========================================================
+// หน้าจอต่าง ๆ
+// =========================================================
+function showOver(){
+ keys.left=keys.right=keys.jump=false;
+ overlay.hidden=false;mobileControls.hidden=true;
+ overlay.innerHTML=`<div class="panel"><h1>💫 พักเติมพลัง!</h1><p class="subtitle">หัวใจหมดแล้ว แต่นักเวทไม่ยอมแพ้<br>เริ่มต่อจากจุดพักล่าสุด (คริสตัลที่ได้แล้วยังอยู่) หรือเริ่มใหม่ทั้งหมดก็ได้</p><button class="btn" id="continueBtn">↻ เล่นต่อจากจุดพัก</button><button class="btn secondary" id="restartBtn">เริ่มใหม่ทั้งหมด</button></div>`;
+ $('continueBtn').onclick=()=>{hearts=CONFIG.maxHearts;respawn();state='play';overlay.hidden=true;mobileControls.hidden=false;updateHUD()};
+ $('restartBtn').onclick=resetGame;
+}
+function showWin(){
+ keys.left=keys.right=keys.jump=false;
+ overlay.hidden=false;mobileControls.hidden=true;
+ const firstTry=quizData.length-missed.size;
+ const starsN=missed.size<=1?3:missed.size<=4?2:1;
+ const review=[...missed].sort((a,b)=>a-b).map(i=>`<li>${esc(quizData[i].q)} → <b>${esc(quizData[i].choices[quizData[i].answer])}</b></li>`).join('');
+ overlay.innerHTML=`<div class="panel"><h1>🌈 กลับบ้านสำเร็จ!</h1><p class="subtitle">ประตูมิติเปิดออกแล้ว! เธอรวบรวมคริสตัลครบ 10 ดวง</p><div style="font-size:clamp(30px,5vw,48px);margin:6px">${'⭐'.repeat(starsN)}${'☆'.repeat(3-starsN)}</div><h2>คะแนน ${score}</h2><p>ตอบถูกตั้งแต่ครั้งแรก ${firstTry}/10 ข้อ</p>${review?`<div class="review"><b>ข้อที่ควรทบทวน:</b><ul>${review}</ul></div>`:'<p>🎉 ตอบถูกทุกข้อตั้งแต่ครั้งแรก เก่งมาก!</p>'}<button class="btn" id="againBtn">🔁 เล่นอีกครั้ง</button><button class="btn secondary" id="menuBtn">กลับเมนู</button></div>`;
+ $('againBtn').onclick=resetGame;$('menuBtn').onclick=showMenu;
+ playTone(523,.15,'triangle');setTimeout(()=>playTone(659,.15,'triangle'),150);setTimeout(()=>playTone(784,.25,'triangle'),300);
+}
+function showHow(){
+ overlay.hidden=false;
+ overlay.innerHTML=`<div class="panel"><h2>📖 วิธีเล่น</h2><p class="story"><b>เดิน:</b> ลูกศรซ้าย/ขวา หรือ A / D<br><b>กระโดด:</b> Space, ลูกศรขึ้น หรือ W (กดค้างเพื่อกระโดดสูงขึ้น)<br><b>มือถือ/แท็บเล็ต:</b> ใช้ปุ่ม ◀ ▶ และ กระโดด บนจอ<br><b>ภารกิจ:</b> ไปที่ประตูคริสตัล 10 บาน แล้วตอบคำถามวิทยาศาสตร์<br><b>เห็ดสีชมพู:</b> เหยียบแล้วเด้งสูง ไปเก็บดาวโบนัสได้<br><b>ระวัง:</b> สไลม์และค้างคาวทำให้เสียหัวใจ เหยียบจากด้านบนเพื่อกำจัดได้ และอย่าตกหลุม!<br><b>ตอบถูกครั้งแรก:</b> ได้หัวใจคืน 1 ดวง</p><button class="btn" id="backBtn">กลับเมนู</button></div>`;
+ $('backBtn').onclick=showMenu;
+}
+function showMenu(){
+ state='menu';hud.hidden=true;mobileControls.hidden=true;overlay.hidden=false;
+ overlay.innerHTML=`<div class="panel"><h1>🪄 ผจญภัยเวทมนต์วิทย์ ป.4</h1><div class="story">เด็กนักเวทตัวน้อยหลงเข้าไปในป่าเวทมนต์ที่เต็มไปด้วยสิ่งมหัศจรรย์<br>ประตูมิติกลับบ้านถูกล็อกด้วยคริสตัลความรู้ 10 ดวง<br>กระโดดข้ามอุปสรรคและตอบคำถามวิทยาศาสตร์ให้ถูกต้อง<br>รวบรวมคริสตัลทั้งหมดเพื่อเปิดประตูมิติกลับบ้าน!</div><button class="btn" id="startBtn">▶ เริ่มเล่น</button><button class="btn secondary" id="howBtn">📖 วิธีเล่น</button><button class="btn" id="menuSoundBtn">${muted?'🔇 เสียงปิดอยู่ (กดเพื่อเปิด)':'🔊 เสียงเปิดอยู่ (กดเพื่อปิด)'}</button><p class="small">เกมการเรียนรู้วิทยาศาสตร์ระดับประถมศึกษาปีที่ 4</p></div>`;
+ $('startBtn').onclick=resetGame;$('howBtn').onclick=showHow;
+ $('menuSoundBtn').onclick=()=>{muted=!muted;if(!muted)ensureAudio();syncSoundBtn();showMenu()};
+}
+
+// =========================================================
+// การควบคุม
+// =========================================================
+const KEYMAP={left:['ArrowLeft','a','A'],right:['ArrowRight','d','D'],jump:[' ','ArrowUp','w','W']};
+function setKey(k,v){if(k==='jump'&&v&&!keys.jump)player.jumpBuffer=7;keys[k]=v}
+document.addEventListener('keydown',e=>{
+ if(state==='quiz'&&['1','2','3','4'].includes(e.key)){e.preventDefault();const c=quizChoices[+e.key-1];if(c)answerQuiz(c.index);return}
+ if(state!=='play')return;
+ for(const k in KEYMAP)if(KEYMAP[k].includes(e.key)){e.preventDefault();setKey(k,true)}
+});
+document.addEventListener('keyup',e=>{for(const k in KEYMAP)if(KEYMAP[k].includes(e.key))setKey(k,false)});
+window.addEventListener('blur',()=>{keys.left=keys.right=keys.jump=false});
+document.querySelectorAll('.touch').forEach(b=>{
+ const k=b.dataset.key,down=e=>{e.preventDefault();ensureAudio();setKey(k,true)},up=e=>{e.preventDefault();setKey(k,false)};
+ b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up);
+ b.addEventListener('contextmenu',e=>e.preventDefault());
+});
+$('soundBtn').onclick=()=>{muted=!muted;syncSoundBtn();if(!muted)ensureAudio()};
+
+// =========================================================
+// ลูปเกม: ตรึงความเร็ว 60 รอบ/วินาที ไม่ว่าจอจะรีเฟรชกี่ Hz
+// =========================================================
+function loop(t){
+ const frame=Math.min(100,t-lastTime||STEP);lastTime=t;acc+=frame;
+ while(acc>=STEP){worldTime++;if(state==='play')update();acc-=STEP}
+ draw();requestAnimationFrame(loop);
+}
+initLevel();showMenu();syncSoundBtn();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
